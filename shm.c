@@ -31,8 +31,38 @@ void shminit() {
 int shm_open(int id, char **pointer) {
 
 //you write this
-
-
+  int i = 0;
+  uint va;
+  int id_found_flag = 0;
+  acquire(&(shm_table.lock));
+  for (i = 0; i< 64; i++) {
+	if(shm_table.shm_pages[i].id == id)
+	{
+	  va = PGROUNDUP(myproc()->sz);
+	  mappages(myproc()->pgdir, (void*)va, PGSIZE, V2P(shm_table.shm_pages[i].frame), PTE_W|PTE_U);
+	  shm_table.shm_pages[i].refcnt ++;
+	  *pointer=(char *)va;
+	  myproc()->sz = PGROUNDUP(myproc()->sz+PGSIZE);
+	  id_found_flag = 1;
+	}
+  }
+  if(id_found_flag == 0){
+	for(i = 0; i < 64; i++){
+	  if(shm_table.shm_pages[i].id == 0)
+	    {
+		  shm_table.shm_pages[i].id = id;
+		  shm_table.shm_pages[i].frame = kalloc();
+		  shm_table.shm_pages[i].refcnt = 1;
+		  memset(shm_table.shm_pages[i].frame,  0, PGSIZE);
+		  va = PGROUNDUP(myproc()->sz);
+	      mappages(myproc()->pgdir, (void*)va, PGSIZE, V2P(shm_table.shm_pages[i].frame), PTE_W|PTE_U);
+		  *pointer=(char*)va;
+		  myproc()->sz = PGROUNDUP(myproc()->sz+PGSIZE);
+		  break;
+		}		
+	}
+  }
+  release(&(shm_table.lock));
 
 
 return 0; //added to remove compiler warning -- you should decide what to return
@@ -42,8 +72,23 @@ return 0; //added to remove compiler warning -- you should decide what to return
 int shm_close(int id) {
 //you write this too!
 
-
+int i;
+  acquire(&(shm_table.lock));
+  for (i = 0; i< 64; i++) {
+    if(shm_table.shm_pages[i].id == id)
+    {
+	  if(shm_table.shm_pages[i].refcnt == 1){
+		shm_table.shm_pages[i].id = 0;
+		shm_table.shm_pages[i].frame =0;
+		shm_table.shm_pages[i].refcnt =0;
+	  }else{
+	    shm_table.shm_pages[i].refcnt--;
+	  }
+	}
+  }
+  release(&(shm_table.lock));
 
 
 return 0; //added to remove compiler warning -- you should decide what to return
 }
+
