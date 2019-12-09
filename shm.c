@@ -35,29 +35,29 @@ int shm_open(int id, char **pointer) {
   uint va;
   int id_found_flag = 0;
   acquire(&(shm_table.lock));
-  for (i = 0; i< 64; i++) {
-	if(shm_table.shm_pages[i].id == id)
+  for (i = 0; i< 64; i++) {  
+	if(shm_table.shm_pages[i].id == id)  //if segment with that id exist
 	{
 	  va = PGROUNDUP(myproc()->sz);
-	  mappages(myproc()->pgdir, (void*)va, PGSIZE, V2P(shm_table.shm_pages[i].frame), PTE_W|PTE_U);
-	  shm_table.shm_pages[i].refcnt ++;
-	  *pointer=(char *)va;
-	  myproc()->sz = PGROUNDUP(myproc()->sz+PGSIZE);
-	  id_found_flag = 1;
+	  mappages(myproc()->pgdir, (void*)va, PGSIZE, V2P(shm_table.shm_pages[i].frame), PTE_W|PTE_U);  //map virtual address to physicall address 
+	  shm_table.shm_pages[i].refcnt ++;  //increment reference counter by 1
+	  *pointer=(char *)va;  //return virtual address 
+	  myproc()->sz = PGROUNDUP(myproc()->sz+PGSIZE);  //increase sz
+	  id_found_flag = 1;  //in the first loop, we found the segment, set id_flag to 1
 	}
   }
-  if(id_found_flag == 0){
-	for(i = 0; i < 64; i++){
-	  if(shm_table.shm_pages[i].id == 0)
+  if(id_found_flag == 0){  //if segment with that id does not exist 
+	for(i = 0; i < 64; i++){ 
+	  if(shm_table.shm_pages[i].id == 0)  //find a empty page
 	    {
-		  shm_table.shm_pages[i].id = id;
-		  shm_table.shm_pages[i].frame = kalloc();
-		  shm_table.shm_pages[i].refcnt = 1;
-		  memset(shm_table.shm_pages[i].frame,  0, PGSIZE);
+		  shm_table.shm_pages[i].id = id;  //set id 
+		  shm_table.shm_pages[i].frame = kalloc();  //allocate one page of physical memory
+		  shm_table.shm_pages[i].refcnt = 1;  //set reference counter to 1
+		  memset(shm_table.shm_pages[i].frame,  0, PGSIZE);  //set that one page of memory to 0
 		  va = PGROUNDUP(myproc()->sz);
-	      mappages(myproc()->pgdir, (void*)va, PGSIZE, V2P(shm_table.shm_pages[i].frame), PTE_W|PTE_U);
-		  *pointer=(char*)va;
-		  myproc()->sz = PGROUNDUP(myproc()->sz+PGSIZE);
+	      mappages(myproc()->pgdir, (void*)va, PGSIZE, V2P(shm_table.shm_pages[i].frame), PTE_W|PTE_U);  //map virtual address to physical address
+		  *pointer=(char*)va;  //return virtual address
+		  myproc()->sz = PGROUNDUP(myproc()->sz+PGSIZE);  //increase sz
 		  break;
 		}		
 	}
@@ -75,14 +75,14 @@ int shm_close(int id) {
 int i;
   acquire(&(shm_table.lock));
   for (i = 0; i< 64; i++) {
-    if(shm_table.shm_pages[i].id == id)
+    if(shm_table.shm_pages[i].id == id) //find segment with that id
     {
-	  if(shm_table.shm_pages[i].refcnt == 1){
-		shm_table.shm_pages[i].id = 0;
-		shm_table.shm_pages[i].frame =0;
-		shm_table.shm_pages[i].refcnt =0;
+	  if(shm_table.shm_pages[i].refcnt == 1){  // if reference counter is 1
+		shm_table.shm_pages[i].id = 0;  //set id to 0
+		shm_table.shm_pages[i].frame =0;  // set frame to 0
+		shm_table.shm_pages[i].refcnt =0;  // set reference counter to 0
 	  }else{
-	    shm_table.shm_pages[i].refcnt--;
+	    shm_table.shm_pages[i].refcnt--;  //decrement reference counter by 1
 	  }
 	}
   }
@@ -91,4 +91,5 @@ int i;
 
 return 0; //added to remove compiler warning -- you should decide what to return
 }
+
 
