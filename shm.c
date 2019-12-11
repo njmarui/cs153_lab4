@@ -33,7 +33,7 @@ int shm_open(int id, char **pointer) {
 //you write this
   int i = 0;
   uint va;
-  int id_found_flag = 0;
+  int id_found = 0;
   acquire(&(shm_table.lock));
   for (i = 0; i< 64; i++) {  
 	if(shm_table.shm_pages[i].id == id)  //if segment with that id exist
@@ -43,10 +43,10 @@ int shm_open(int id, char **pointer) {
 	  shm_table.shm_pages[i].refcnt ++;  //increment reference counter by 1
 	  *pointer=(char *)va;  //return virtual address 
 	  myproc()->sz = PGROUNDUP(myproc()->sz+PGSIZE);  //increase sz
-	  id_found_flag = 1;  //in the first loop, we found the segment, set id_flag to 1
+	  id_found = 1;  //in the first loop, we found the segment, set id_flag to 1
 	}
   }
-  if(id_found_flag == 0){  //if segment with that id does not exist 
+  if(id_found == 0){  //if segment with that id does not exist 
 	for(i = 0; i < 64; i++){ 
 	  if(shm_table.shm_pages[i].id == 0)  //find a empty page
 	    {
@@ -72,17 +72,16 @@ return 0; //added to remove compiler warning -- you should decide what to return
 int shm_close(int id) {
 //you write this too!
 
-int i;
+  int i;
   acquire(&(shm_table.lock));
   for (i = 0; i< 64; i++) {
-    if(shm_table.shm_pages[i].id == id) //find segment with that id
-    {
-	  if(shm_table.shm_pages[i].refcnt == 1){  // if reference counter is 1
-		shm_table.shm_pages[i].id = 0;  //set id to 0
-		shm_table.shm_pages[i].frame =0;  // set frame to 0
-		shm_table.shm_pages[i].refcnt =0;  // set reference counter to 0
-	  }else{
-	    shm_table.shm_pages[i].refcnt--;  //decrement reference counter by 1
+    if(shm_table.shm_pages[i].id == id){
+	  if(shm_table.shm_pages[i].refcnt > 1){  
+		shm_table.shm_pages[i].refcnt--;    
+	  }else if(shm_table.shm_pages[i].refcnt == 1){
+	    shm_table.shm_pages[i].id = 0;  
+		shm_table.shm_pages[i].frame = 0;  
+		shm_table.shm_pages[i].refcnt = 0; 
 	  }
 	}
   }
@@ -91,5 +90,9 @@ int i;
 
 return 0; //added to remove compiler warning -- you should decide what to return
 }
+
+
+
+
 
 
